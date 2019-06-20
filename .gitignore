@@ -1,0 +1,7 @@
+.idea/
+
+data/
+
+# can be cloned from mlflow repository
+mlflow/
+mlruns/
