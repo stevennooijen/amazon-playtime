@@ -1,29 +1,26 @@
 # Playing with SageMaker
 
-and MLflow?
+Just some experiments to see what the tool is about, what it can and
+what it cannot do.
 
 ### Data used
 
-https://www.kaggle.com/mehdidag/black-friday/version/1
+To play around we use a dataset from Kaggle called
+[Black Friday](https://www.kaggle.com/mehdidag/black-friday/version/1).
+It has a decent size of 5 MB, and includes 538k rows x 12 columns.
 
-5 MB
+## About Sagemaker
 
-538k x 12
+Some helpful resources:
 
+* A [tutorial](https://aws.amazon.com/getting-started/tutorials/build-train-deploy-machine-learning-model-sagemaker/)
+on how to build, train, and deploy an ML model
+* How to create your own docker image for
+[custom ML models](https://github.com/awslabs/amazon-sagemaker-examples/blob/master/advanced_functionality/scikit_bring_your_own/scikit_bring_your_own.ipynb)
+* Some [workflow best practices](https://aws.amazon.com/blogs/machine-learning/how-to-use-common-workflows-on-amazon-sagemaker-notebook-instances/)
+on how to use Git and sync with S3 through lifecycle configurations
 
-### About Sagemaker
-
-https://aws.amazon.com/getting-started/tutorials/build-train-deploy-machine-learning-model-sagemaker/
-
-#### Common workflow
-
-https://aws.amazon.com/blogs/machine-learning/how-to-use-common-workflows-on-amazon-sagemaker-notebook-instances/
-
-#### Creating your own docker image
-
-https://github.com/awslabs/amazon-sagemaker-examples/blob/master/advanced_functionality/scikit_bring_your_own/scikit_bring_your_own.ipynb
-
-## Working with notebook instances
+## SageMaker notebook instances
 
 In theory, SageMaker notebook instances are great for data scientists in
 the experimentation phase where the company doesn't like the scientists
@@ -39,7 +36,7 @@ SageMaker instance to your own local machine (through proxies)
 persistent storage, and use virtual environments.
 
 
-## Working with an IDE
+### Working with an IDE
 
 Sadly it is [not possible](https://forums.aws.amazon.com/thread.jspa?messageID=865561&tstart=0)
 to configure your (PyCharm) remote interpreter to work with SageMaker as
@@ -52,7 +49,7 @@ Possibly, you could create a dummy data set locally that you use
 for development and then run your code as a training/scoring job on
 SageMaker if you want to access the real data.
 
-## Lifecycle configurations
+### Lifecycle configurations
 
 Lifecycle Configurations provide a mechanism to customize Notebook
 Instances via shell scripts that are executed during the lifecycle of a
@@ -64,7 +61,8 @@ How to [set it up](https://docs.aws.amazon.com/sagemaker/latest/dg/nbi-git-repo.
 
 One use cases for a lifecycle scripts is to initialize and configure
 `gitconfig` scripts per user. See the `lifecycle-scripts/` folder for
-an example.
+an example. Also see the link provided in resources for an example
+lifecycle script on Git.
 
 ### Virtual environments on SageMaker
 
@@ -76,29 +74,27 @@ startup.
 See other relevant example scripts
 [here](https://github.com/aws-samples/amazon-sagemaker-notebook-instance-lifecycle-config-samples).
 
-### persistent storage
+### Persistent storage
 
-mount persistent disk
+By default Amazon attaches a 5 GB ML persistent storage volume to the
+instance. This can be increased up to 16 TB max. Read about it
+[here](https://docs.aws.amazon.com/sagemaker/latest/dg/howitworks-create-ws.html)
+* Only files and data saved within the `/home/ec2-user/SageMaker`
+folder persist between notebook instance sessions.
+* Each notebook instance's `/tmp` directory provides a minimum of
+10 GB non-persistent storage in an instant store.
 
-> eventueel ook mounten van s3 storage om persistent dingen op te slaan
+This means that between starting and stopping of the instance
+your files are preserved based on the directory they are in.
 
-if stopped, and then started again, do we keep the storage? > YES
-i.e. do we need to commit end of day to keep our work? > No
-Apparently persistent storage attached.
->> probably as long as the machine is not stopped?! what happens when
-stopped and relaunched?
+For big files however, it might be recommended to store them on and
+access them from S3. Alternatively, one can mount an
+[Elastic File System](https://aws.amazon.com/blogs/machine-learning/mount-an-efs-file-system-to-an-amazon-sagemaker-notebook-with-lifecycle-configurations/)
+for increased accessibility over Amazon S3. See the
+`lifecycle-scripts/mount-efs.sh` script on how to do this in a lifecycle
+configuration.
 
-Question:
->> also, what happens if machine gets deleted? How do you easily set up
-a new machine with the same settings?
-
-possible solutions:
-- check in in code to github end of day (and beginning of day pulling it)
-    - can we do the git configuration automatically when firing up a new machine?
-- mounting the sagemaker storage to an s3 bucket to make it persistent.
-
-
-## Serving the MLflow UI on SageMaker
+### Serving the MLflow UI on SageMaker
 
 Serving is not as easy on SageMaker as is demonstrated in the
 [quickstart guide](https://mlflow.org/docs/latest/quickstart.html#).
