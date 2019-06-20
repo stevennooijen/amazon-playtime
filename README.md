@@ -20,7 +20,7 @@ on how to build, train, and deploy an ML model
 * Some [workflow best practices](https://aws.amazon.com/blogs/machine-learning/how-to-use-common-workflows-on-amazon-sagemaker-notebook-instances/)
 on how to use Git and sync with S3 through lifecycle configurations
 
-## SageMaker notebook instances
+## Working with SageMaker notebook instances
 
 In theory, SageMaker notebook instances are great for data scientists in
 the experimentation phase where the company doesn't like the scientists
@@ -29,7 +29,7 @@ to store data and code locally on their own machines.
 However, there are some limitations that make it a bit tougher to work
  on SageMaker compared to working locally:
 1. Instances are sealed off in such a way that you cannot ssh
-into the machine, making it impossible to use IDE remote interpreters
+into the machine, making it very hard to use IDE remote interpreters
 2. It's not straightforward yet how to expose local processes on the
 SageMaker instance to your own local machine (through proxies)
 3. A little bit of extra effort is needed to set up Git, guarantee
@@ -39,40 +39,29 @@ persistent storage, and use virtual environments.
 ### Working with an IDE
 
 Sadly it is [not possible](https://forums.aws.amazon.com/thread.jspa?messageID=865561&tstart=0)
-to configure your (PyCharm) remote interpreter to work with SageMaker as
-SageMaker blocks ssh tunnels.
+to configure your (PyCharm) remote interpreter to work with SageMaker
+easily as SageMaker blocks ssh tunnels.
 
-This means you will have to work through pushing and pulling code with
-Git.
+A hack around it is to set up a Virtual Private Cloud (VPC) with a
+security group that contains inbound TCP rules that open port 22 to IP
+addresses of your liking (for example of your organisation). you can
+then add a SageMaker notebook instance to this security group, and
+port 22 will now be open for incoming ssh traffic. You can then
+configure the remote interpreter of your IDE.
 
-Possibly, you could create a dummy data set locally that you use
-for development and then run your code as a training/scoring job on
-SageMaker if you want to access the real data.
+Considering the above, it is likely easier to just share your code
+between local and remote through pushing and pulling with Git. For
+package development, it might be best to create a dummy data set
+locally that you use for development (and creating unit tests!). If
+the code looks good, you can then run it through a SageMaker training
+or scoring job (instead of a notebook instance!) if you want to access
+the real data.
 
 ### Lifecycle configurations
 
 Lifecycle Configurations provide a mechanism to customize Notebook
 Instances via shell scripts that are executed during the lifecycle of a
 Notebook Instance (for example on start or create of an instance).
-
-### Git on SageMaker
-
-How to [set it up](https://docs.aws.amazon.com/sagemaker/latest/dg/nbi-git-repo.html).
-
-One use cases for a lifecycle scripts is to initialize and configure
-`gitconfig` scripts per user. See the `lifecycle-scripts/` folder for
-an example. Also see the link provided in resources for an example
-lifecycle script on Git.
-
-### Virtual environments on SageMaker
-
-Lifecycle scripts can be useful for creating and activating your own
-virtual environments. See [documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/notebook-lifecycle-config.html)
-for a sample script on how to install a package in the Python3 env on
-startup.
-
-See other relevant example scripts
-[here](https://github.com/aws-samples/amazon-sagemaker-notebook-instance-lifecycle-config-samples).
 
 ### Persistent storage
 
@@ -93,6 +82,39 @@ access them from S3. Alternatively, one can mount an
 for increased accessibility over Amazon S3. See the
 `lifecycle-scripts/mount-efs.sh` script on how to do this in a lifecycle
 configuration.
+
+### Git on SageMaker
+
+Connect your GitHub repository on AWS following
+[these steps](https://aws.amazon.com/blogs/machine-learning/amazon-sagemaker-notebooks-now-support-git-integration-for-increased-persistence-collaboration-and-reproducibility/):
+1. You are required to add the Git repository as a resource in your
+Amazon SageMaker account.
+2.  In case authentication is needed, you need to use the AWS Secrets
+Manager to keep for example a personal access token.
+3.  When the Git repository is created, you can associate it to your
+notebook instances.
+
+If successful, your project will be cloned in the persistent
+`SageMaker/` folder on the instance.
+
+If you don't want to add your Git repository as an AWS resource, or when
+you don't like using the AWS Secrets Manager, you could of course set
+up everything yourself using `.gitconfig` and `.git-credentials` files
+that need to be copied to the not-persistent `.ssh/` folder every time
+the resource is rebooted. You could configure this automatically,
+using a lifecycle script. See `lifecycle-scripts/set-gitconfig.sh` for
+an example.
+
+### Virtual environments on SageMaker
+
+Lifecycle scripts can be useful for creating and activating your own
+virtual environments. See [documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/notebook-lifecycle-config.html)
+for a sample script on how to install a package in the Python3 env on
+startup.
+
+See other relevant example scripts
+[here](https://github.com/aws-samples/amazon-sagemaker-notebook-instance-lifecycle-config-samples).
+
 
 ### Serving the MLflow UI on SageMaker
 
